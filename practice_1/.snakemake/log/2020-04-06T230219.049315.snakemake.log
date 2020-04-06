@@ -1,0 +1,8 @@
+Building DAG of jobs...
+MissingInputException in line 2 of /nvmessdnode3/opt/.method/snakemake_pipeline/practice_1/Sankefile_test2:
+Missing input files for rule bcftools_call_variants:
+data/genome.fa
+sorted_reads/A.sorted.bam.bai
+sorted_reads/B.sorted.bam.bai
+sorted_reads/A.sorted.bam
+sorted_reads/B.sorted.bam

@@ -1,0 +1,3 @@
+NameError in line 11 of /nvmessdnode3/opt/.method/snakemake_pipeline/practice_1/Sankefile_test1:
+name 'sample' is not defined
+  File "/nvmessdnode3/opt/.method/snakemake_pipeline/practice_1/Sankefile_test1", line 11, in <module>

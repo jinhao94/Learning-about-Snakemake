@@ -1,0 +1,3 @@
+NameError in line 3 of /nvmessdnode3/opt/.method/snakemake_pipeline/practice_1/Sankefile_test2:
+name 'eapand' is not defined
+  File "/nvmessdnode3/opt/.method/snakemake_pipeline/practice_1/Sankefile_test2", line 3, in <module>
