@@ -1,0 +1,7 @@
+Building DAG of jobs...
+MissingInputException in line 3 of /nvmessdnode3/opt/.method/snakemake_pipeline/practice_1/Sankefile_test2:
+Missing input files for rule bcftools_call:
+data/sample/happy_2.fq
+data/sample/unhappy_2.fq
+data/sample/unhappy_1.fq
+data/sample/happy_1.fq
