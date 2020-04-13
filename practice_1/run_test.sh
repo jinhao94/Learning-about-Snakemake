@@ -10,5 +10,4 @@ snakemake -s Sankefile_test1 -np  mapped_reads/{happy_1,happy_2}.bam
 You can also assign the input file.
 !
 snakemake -s Sankefile_test2 -np
-
 ## tese3
