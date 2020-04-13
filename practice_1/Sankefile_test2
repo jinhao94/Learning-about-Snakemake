@@ -1,0 +1,12 @@
+SAMPLES = ["happy", "unhappy"]
+RANGE = ['1', '2']
+rule bcftools_call:
+    input:
+        fa="data/genome.fa",
+        bam=expand("data/samples/{sample}_{range}.fq", sample=SAMPLES, range=RANGE)
+    output:
+        "calls/all.vcf"
+    shell:
+        "samtools mpileup -g -f {input.fa} {input.bam} | "
+        "bcftools call -mv - > {output}"
+
