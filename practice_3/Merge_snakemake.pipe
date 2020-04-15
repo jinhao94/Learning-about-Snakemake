@@ -1,0 +1,138 @@
+import os
+import glob
+from pathlib import Path
+import snakemake
+import itertools
+
+workdir: "/userdatanode3/data_jinh/nanopore/mock_data/merged_subassemblies/test_snakemake"
+script_path="/nvmessdnode3/opt/software/lathe/scripts"
+## Load sample list
+sample_list = {}
+with open(config['file_names_txt'],'r') as f:
+    for line in f:
+        items = line.strip().split("\t")
+        sample_list[items[0]] = items[1]
+
+SAMPLES = list(sample_list.keys())
+SIZE = config['size'].split(",")
+SOFTWARE = config['software'].split(",")
+
+
+# # software combined
+# if len(SOFTWARE) == 1 :
+#     SOFT_COMBN = SOFTWARE
+# else:
+#     SOFT_COMBN = map(lambda x:'_'.join(x), itertools.permutations(SOFTWARE, 2))
+
+SOFT_COMBN=['flye_canu', 'flye_wtdbg2']
+
+rule all:
+    input:
+        expand("{sample}/1.assemble/0.merge/merge_final/{sample}_{soft_combn}_{final_size}.final_merged.fasta", sample=SAMPLES, soft_combn=SOFT_COMBN, final_size=SIZE[-1])
+
+
+def size_merge_input():
+    result = expand("{{sample}}/1.assemble/final_assembly_links/{{sample}}_{{software}}_{size}.fasta", size=SIZE)
+    return(result)
+
+rule merge_by_size:
+    #Conservatively merge the two subassemblies
+    input: 
+        size_merge_input()
+    output: 
+        "{sample}/1.assemble/0.merge/size/{sample}_{software}_{final_size}_merged.fasta"
+    params:
+        outdir="{sample}/1.assemble/0.merge/size"
+    resources:
+        time=6,
+        mem=24
+    run:
+        for i in range(len(input)):
+            if i == 1:
+                out=input[i]+"_out"
+                shell_cmd="merge_assemblies_v2.sh -p " +  input[i] + " -s " + input[i-1] + " -o " + out
+                shell(shell_cmd)
+            elif i>1:
+                new_out=input[i]+"_out"
+                shell_cmd="merge_assemblies_v2.sh -p " + input[i] + " -s " + out + "/merged_merged.fasta -o " + new_out
+                out=input[i]+"_out"
+                shell(shell_cmd)
+        mv_cmd="mv " + out + "/merged_merged.fasta " + output[0]
+        # print(mv_cmd)
+        shell(mv_cmd)
+
+
+# merge_assemblies_v2.sh -p {input.primer} -s {input.second} -o {params.outdir} -ml 10000 -c 5 -hco 10
+
+rule no_merge_by_size:
+    input: 
+        size_merge_input
+    output: 
+        "{sample}/1.assemble/0.merge/size/{sample}_{software}_{final_size}_no_size_merge.fasta"
+    shell:
+        "ln -s \$PWD/{input} {output}"
+
+
+def choose_size_merge():
+    if len(SIZE) == 1:
+        result = expand(rules.no_merge_by_size.output, sample = SAMPLES, software=SOFTWARE , final_size=SIZE)
+    else:
+        result = expand(rules.merge_by_size.output, sample = SAMPLES, software=SOFTWARE , final_size=SIZE[-1])
+    return(result)
+
+
+
+rule merge_by_software:
+    #Conservatively merge the subassemblies
+    input: 
+        choose_size_merge()
+    output: 
+        "{sample}/1.assemble/0.merge/software/{sample}_{soft_combn}_{final_size}.merged.fasta"
+    params:
+        outdir="{sample}/1.assemble/0.merge/software/"
+    resources:
+        time=6,
+        mem=24
+    run:
+        paire = wildcards.soft_combn.split("_")
+        pre=wildcards.sample + "_" + paire[0]
+        ext=wildcards.sample + "_" + paire[1]
+        for i in input:
+            if pre in i:
+                pre_run = i
+            elif ext in i:
+                ext_run =  i
+        out=params.outdir + "_".join([wildcards.sample, pre, ext, wildcards.final_size, ".merged.fasta"])
+        shell_cmd="merge_assemblies_v2.sh -p " +  pre_run + " -s " + ext_run + " -o " + out
+        mv_cmd="mv " + out + "/merged_merged.fasta " + output[0]
+        # print(shell_cmd)
+        shell(shell_cmd)
+        shell(mv_cmd)
+
+
+
+rule no_merge_by_software:
+    input: 
+        choose_size_merge 
+    output: 
+        "{sample}/1.assemble/0.merge/software/{sample}_{soft_combn}_{final_size}.merged.fasta"
+    shell:
+        "ln -s $PWD/{input} {output}"
+
+
+def choose_software_merge(wildcards):
+    if len(SOFTWARE) == 1:
+        result = rules.no_merge_by_software.output
+    else:
+        result = rules.merge_by_software.output
+    return(result)
+
+rule final:
+    input:
+        choose_software_merge
+    output:
+        "{sample}/1.assemble/0.merge/merge_final/{sample}_{soft_combn}_{final_size}.final_merged.fasta"
+    shell:
+        """
+        ln -s $PWD/{input} {output}
+        """
